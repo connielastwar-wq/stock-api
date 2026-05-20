@@ -1,143 +1,74 @@
-const express = require("express");
-const cors = require("cors");
-const path = require("path");
+async function searchStock() {
 
-const app = express();
+  const stockNo = document.getElementById("stockNo").value;
 
-app.use(cors());
-
-app.use(express.static(__dirname));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-async function fetchJSON(url) {
-  const res = await fetch(url);
-
-  if (!res.ok) {
-    throw new Error(`API錯誤 ${res.status}`);
+  if (!stockNo) {
+    alert("請輸入股票代號");
+    return;
   }
-
-  return await res.json();
-}
-
-app.get("/api/stock/:id", async (req, res) => {
 
   try {
 
-    const stockId = req.params.id;
+    const response = await fetch(`/api/stock/${stockNo}`);
 
-    const today = new Date();
+    const data = await response.json();
 
-    const yyyy = today.getFullYear();
+    console.log(data);
 
-    const mm =
-      String(today.getMonth() + 1).padStart(2, "0");
+    document.getElementById("name").innerText =
+      data.companyName || "--";
 
-    const dd =
-      String(today.getDate()).padStart(2, "0");
+    document.getElementById("code").innerText =
+      stockNo;
 
-    const date = `${yyyy}${mm}${dd}`;
+    document.getElementById("price").innerText =
+      data.close || "--";
 
-    // 上市
-    const twseURL =
-      `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&stockNo=${stockId}&date=${date}`;
+    document.getElementById("time").innerText =
+      data.updateTime || "--";
 
-    let stockName = stockId;
-    let latestPrice = "--";
+    document.getElementById("change").innerText =
+      data.changePrice || "--";
 
-    try {
+    document.getElementById("percent").innerText =
+      data.changePercent || "--";
 
-      const twseData = await fetchJSON(twseURL);
+    document.getElementById("volume").innerText =
+      data.tradeVolume || "--";
 
-      if (twseData?.title) {
+    document.getElementById("high").innerText =
+      data.highPrice || "--";
 
-        stockName =
-          twseData.title.split(" ")[2] || stockId;
+    document.getElementById("low").innerText =
+      data.lowPrice || "--";
 
-      }
+    document.getElementById("open").innerText =
+      data.openPrice || "--";
 
-      if (twseData?.data?.length) {
+    document.getElementById("foreign").innerText =
+      data.foreign || "--";
 
-        const latest =
-          twseData.data[twseData.data.length - 1];
+    document.getElementById("investment").innerText =
+      data.investment || "--";
 
-        latestPrice = latest[6];
+    document.getElementById("dealer").innerText =
+      data.dealer || "--";
 
-      }
+    document.getElementById("total").innerText =
+      data.total || "--";
 
-    } catch (e) {
-      console.log("TWSE失敗");
-    }
+    document.getElementById("margin").innerText =
+      data.margin || "--";
 
-    // 三大法人
-    const institutionURL =
-      "https://openapi.twse.com.tw/v1/fund/T86";
-
-    let foreign = "--";
-    let investment = "--";
-    let dealer = "--";
-    let total = "--";
-
-    try {
-
-      const institutionData =
-        await fetchJSON(institutionURL);
-
-      const target =
-        institutionData.find(
-          x => x.Code === stockId
-        );
-
-      if (target) {
-
-        foreign = target.Foreign_Investor || "--";
-        investment = target.Investment_Trust || "--";
-        dealer = target.Dealer_total || "--";
-        total = target.Total || "--";
-
-      }
-
-    } catch (e) {
-      console.log("法人失敗");
-    }
-
-    res.json({
-      name: stockName,
-      price: latestPrice,
-      change: 0,
-      open: "--",
-      high: "--",
-      low: "--",
-      volume: "--",
-
-      foreign,
-      investment,
-      dealer,
-      total,
-
-      margin: "--",
-      short: "--"
-    });
+    document.getElementById("short").innerText =
+      data.short || "--";
 
   } catch (err) {
 
     console.log(err);
 
-    res.status(500).json({
-      error: err.message
-    });
+    alert("查詢失敗");
 
   }
 
-});
-
-const PORT =
-  process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-
-  console.log(`API啟動成功 ${PORT}`);
-
-});
+}
