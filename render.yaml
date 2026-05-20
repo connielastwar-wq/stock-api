@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: ai-image-generator
+    env: node
+    plan: free
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start

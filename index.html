@@ -1,0 +1,485 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>手機版台股查詢</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(180deg, #090b10 0%, #12151f 100%);
+      color: #e8eaf8;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      padding: 20px 18px;
+      background: rgba(15,18,26,.96);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(18px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #40d7ff, #5f7bff);
+      color: #fff;
+      font-size: 1.35rem;
+      font-weight: 800;
+    }
+    .brand-info h1 {
+      font-size: 1.2rem;
+      margin-bottom: 6px;
+    }
+    .brand-info p {
+      color: #abb2d1;
+      font-size: .95rem;
+      line-height: 1.5;
+    }
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 18px;
+      flex: 1;
+    }
+    .card {
+      background: rgba(18,23,36,.96);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.22);
+      padding: 20px;
+      backdrop-filter: blur(18px);
+    }
+    .section-title {
+      color: #8c97bf;
+      font-size: .82rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .form-row {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .form-row label {
+      color: #a3afda;
+      font-size: .95rem;
+    }
+    .form-row input {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px;
+      background: rgba(255,255,255,.04);
+      color: #f1f5ff;
+      padding: 16px 18px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .form-row input:focus {
+      border-color: #6d7efe;
+      box-shadow: 0 0 0 4px rgba(109,126,254,.14);
+    }
+    .btn-search {
+      width: 100%;
+      border: none;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #3eb0ff, #736eff);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 16px;
+      cursor: pointer;
+      transition: transform .15s, opacity .2s;
+    }
+    .btn-search:hover { opacity: .95; }
+    .btn-search:active { transform: scale(.98); }
+    .hint {
+      color: #9aa4c7;
+      font-size: .95rem;
+      line-height: 1.7;
+    }
+    .error-banner {
+      background: rgba(247,90,90,.16);
+      border: 1px solid rgba(247,90,90,.4);
+      color: #f5b5b5;
+      padding: 14px 16px;
+      border-radius: 16px;
+      margin-top: 16px;
+      display: none;
+      font-size: .95rem;
+    }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .info-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .info-card strong {
+      display: block;
+      color: #b8c2e4;
+      font-size: .88rem;
+      margin-bottom: 10px;
+    }
+    .info-card span {
+      display: block;
+      color: #f2f6ff;
+      font-size: 1.4rem;
+      font-weight: 700;
+      word-break: break-word;
+    }
+    .info-card.small span { font-size: 1.05rem; }
+    .info-card.note {
+      grid-column: span 2;
+      background: rgba(71,86,142,.18);
+      color: #c5d0ff;
+    }
+    .info-card.note strong { color: #d3daf2; }
+    .stock-label {
+      color: #9aa4c7;
+      font-size: .95rem;
+      margin-top: 10px;
+    }
+    @media (max-width: 680px) {
+      main { padding: 16px; }
+      .result-grid { grid-template-columns: 1fr; }
+      .info-card.note { grid-column: span 1; }
+      .brand { flex-direction: column; align-items: flex-start; }
+      .brand-mark { width: 42px; height: 42px; }
+      .brand-info h1 { font-size: 1.15rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-mark">股</div>
+      <div class="brand-info">
+        <h1>手機版台股查詢</h1>
+        <p>輸入股票代號後，透過 fetch 呼叫 API 並顯示即時價格。</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="section-title">股票查詢</div>
+      <div class="form-row">
+        <label for="tickerInput">代號</label>
+        <input id="tickerInput" type="text" placeholder="例如：2330" autocomplete="off" />
+      </div>
+      <button class="btn-search" id="searchBtn">查詢 API 資料</button>
+      <p class="hint">輸入股票代號後，將呼叫 http://192.168.0.199:3000/api/stock/{代號}。</p>
+      <div class="error-banner" id="errorBanner"></div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">查詢結果</div>
+      <div class="info-card">
+        <strong>股票名稱</strong>
+        <span id="stockName">-</span>
+        <div class="stock-label" id="stockSymbol">代號：-</div>
+      </div>
+      <div class="info-card">
+        <strong>即時價格</strong>
+        <span id="stockPrice">-</span>
+        <div class="stock-label" id="stockUpdate">更新時間：-</div>
+      </div>
+      <div class="result-grid">
+        <div class="info-card small">
+          <strong>漲跌</strong>
+          <span id="stockChange">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>漲跌幅</strong>
+          <span id="stockChangePercent">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>成交量</strong>
+          <span id="stockVolume">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>最高價</strong>
+          <span id="stockHigh">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>最低價</strong>
+          <span id="stockLow">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>外資</strong>
+          <span id="institutionalForeign">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>投信</strong>
+          <span id="institutionalInvestmentTrust">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>自營商</strong>
+          <span id="institutionalDealer">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>三大法人合計</strong>
+          <span id="institutionalTotal">-</span>
+        </div>
+        <div class="info-card note">
+          <strong>提示</strong>
+          <span>僅顯示 success:true 的資料，不會顯示原始 JSON。</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">FinMind 資料</div>
+      <div class="info-card note">
+        <strong>最新公開日</strong>
+        <span id="finmindLatestDate">尚無最新公開資料</span>
+      </div>
+      <div class="result-grid">
+        <div class="info-card small">
+          <strong>外資買賣超</strong>
+          <span id="finmindForeign">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>投信買賣超</strong>
+          <span id="finmindInvestmentTrust">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>自營商買賣超</strong>
+          <span id="finmindDealer">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>三大法人合計</strong>
+          <span id="finmindTotal">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>融資餘額</strong>
+          <span id="finmindMarginBalance">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>融券餘額</strong>
+          <span id="finmindShortBalance">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>融資買進</strong>
+          <span id="finmindMarginBuy">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>融資賣出</strong>
+          <span id="finmindMarginSell">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>融券買進</strong>
+          <span id="finmindShortBuy">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>融券賣出</strong>
+          <span id="finmindShortSell">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>外資持股</strong>
+          <span id="finmindForeignShares">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>外資持股比率</strong>
+          <span id="finmindForeignRatio">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>外資可用剩餘</strong>
+          <span id="finmindForeignRemainShares">-</span>
+        </div>
+        <div class="info-card small">
+          <strong>外資剩餘比率</strong>
+          <span id="finmindForeignRemainRatio">-</span>
+        </div>
+        <div class="info-card note">
+          <strong>FinMind 提供</strong>
+          <span>若 FinMind 回傳資料缺漏，顯示「尚無最新公開資料」。</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = '/api/stock';
+    const NO_DATA = '尚無最新公開資料';
+
+    const refs = {
+      tickerInput: document.getElementById('tickerInput'),
+      searchBtn: document.getElementById('searchBtn'),
+      errorBanner: document.getElementById('errorBanner'),
+      stockName: document.getElementById('stockName'),
+      stockSymbol: document.getElementById('stockSymbol'),
+      stockPrice: document.getElementById('stockPrice'),
+      stockUpdate: document.getElementById('stockUpdate'),
+      stockChange: document.getElementById('stockChange'),
+      stockChangePercent: document.getElementById('stockChangePercent'),
+      stockVolume: document.getElementById('stockVolume'),
+      stockHigh: document.getElementById('stockHigh'),
+      stockLow: document.getElementById('stockLow'),
+      institutionalForeign: document.getElementById('institutionalForeign'),
+      institutionalInvestmentTrust: document.getElementById('institutionalInvestmentTrust'),
+      institutionalDealer: document.getElementById('institutionalDealer'),
+      institutionalTotal: document.getElementById('institutionalTotal'),
+      finmindLatestDate: document.getElementById('finmindLatestDate'),
+      finmindForeign: document.getElementById('finmindForeign'),
+      finmindInvestmentTrust: document.getElementById('finmindInvestmentTrust'),
+      finmindDealer: document.getElementById('finmindDealer'),
+      finmindTotal: document.getElementById('finmindTotal'),
+      finmindMarginBalance: document.getElementById('finmindMarginBalance'),
+      finmindShortBalance: document.getElementById('finmindShortBalance'),
+      finmindMarginBuy: document.getElementById('finmindMarginBuy'),
+      finmindMarginSell: document.getElementById('finmindMarginSell'),
+      finmindShortBuy: document.getElementById('finmindShortBuy'),
+      finmindShortSell: document.getElementById('finmindShortSell'),
+      finmindForeignShares: document.getElementById('finmindForeignShares'),
+      finmindForeignRatio: document.getElementById('finmindForeignRatio'),
+      finmindForeignRemainShares: document.getElementById('finmindForeignRemainShares'),
+      finmindForeignRemainRatio: document.getElementById('finmindForeignRemainRatio')
+    };
+
+    refs.searchBtn.addEventListener('click', searchStock);
+    refs.tickerInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') searchStock();
+    });
+
+    function setError(message) {
+      refs.errorBanner.textContent = `錯誤：${message}`;
+      refs.errorBanner.style.display = 'block';
+    }
+
+    function clearError() {
+      refs.errorBanner.textContent = '';
+      refs.errorBanner.style.display = 'none';
+    }
+
+    function formatNumber(value) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return '-';
+      return Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    }
+
+    function formatVolume(value) {
+      if (value === null || value === undefined || value === '') return '-';
+      const number = Number(String(value).replace(/,/g, ''));
+      return Number.isNaN(number) ? String(value) : number.toLocaleString('en-US');
+    }
+
+    function finmindText(item) {
+      if (!item || item?.text === null || item?.text === undefined) {
+        return NO_DATA;
+      }
+      return item.text || NO_DATA;
+    }
+
+    function resetResult() {
+      refs.stockName.textContent = '-';
+      refs.stockSymbol.textContent = '代號：-';
+      refs.stockPrice.textContent = '-';
+      refs.stockUpdate.textContent = '更新時間：-';
+      refs.stockChange.textContent = '-';
+      refs.stockChangePercent.textContent = '-';
+      refs.stockVolume.textContent = '-';
+      refs.stockHigh.textContent = '-';
+      refs.stockLow.textContent = '-';
+      refs.institutionalForeign.textContent = '-';
+      refs.institutionalInvestmentTrust.textContent = '-';
+      refs.institutionalDealer.textContent = '-';
+      refs.institutionalTotal.textContent = '-';
+      refs.finmindLatestDate.textContent = NO_DATA;
+      refs.finmindForeign.textContent = NO_DATA;
+      refs.finmindInvestmentTrust.textContent = NO_DATA;
+      refs.finmindDealer.textContent = NO_DATA;
+      refs.finmindTotal.textContent = NO_DATA;
+      refs.finmindMarginBalance.textContent = NO_DATA;
+      refs.finmindShortBalance.textContent = NO_DATA;
+      refs.finmindMarginBuy.textContent = NO_DATA;
+      refs.finmindMarginSell.textContent = NO_DATA;
+      refs.finmindShortBuy.textContent = NO_DATA;
+      refs.finmindShortSell.textContent = NO_DATA;
+      refs.finmindForeignShares.textContent = NO_DATA;
+      refs.finmindForeignRatio.textContent = NO_DATA;
+      refs.finmindForeignRemainShares.textContent = NO_DATA;
+      refs.finmindForeignRemainRatio.textContent = NO_DATA;
+    }
+
+    async function searchStock() {
+      const code = refs.tickerInput.value.trim();
+      clearError();
+
+      if (!code) {
+        setError('請輸入股票代號');
+        return;
+      }
+
+      resetResult();
+      refs.stockName.textContent = '查詢中...';
+      refs.stockPrice.textContent = '讀取中...';
+
+      try {
+        const response = await fetch(`${API_BASE}/${encodeURIComponent(code)}`);
+        const json = await response.json();
+
+        if (!response.ok || json.success === false) {
+          const message = json.message || json.error || '查詢失敗';
+          throw new Error(message);
+        }
+
+        const stock = json.data || {};
+        refs.stockName.textContent = stock.name || '-';
+        refs.stockSymbol.textContent = `代號：${stock.symbol || code}`;
+        refs.stockPrice.textContent = formatNumber(stock.price);
+        refs.stockUpdate.textContent = `更新時間：${stock.updateTime || '-'}`;
+        const changeValue = stock.change ?? 0;
+        const changePercent = stock.changePercent ?? 0;
+        refs.stockChange.textContent = `${changeValue >= 0 ? '+' : ''}${formatNumber(changeValue)}`;
+        refs.stockChangePercent.textContent = `${changePercent >= 0 ? '+' : ''}${formatNumber(changePercent)}%`;
+        refs.stockVolume.textContent = formatVolume(stock.volume);
+        refs.stockHigh.textContent = formatNumber(stock.high);
+        refs.stockLow.textContent = formatNumber(stock.low);
+        refs.institutionalForeign.textContent = stock.institutional?.foreign?.text || '-';
+        refs.institutionalInvestmentTrust.textContent = stock.institutional?.investmentTrust?.text || '-';
+        refs.institutionalDealer.textContent = stock.institutional?.dealer?.text || '-';
+        refs.institutionalTotal.textContent = stock.institutional?.total?.text || '-';
+
+        refs.finmindLatestDate.textContent = stock.finmind?.latestDate ? `資料日：${stock.finmind.latestDate}` : NO_DATA;
+        refs.finmindForeign.textContent = finmindText(stock.finmind?.institutional?.foreign);
+        refs.finmindInvestmentTrust.textContent = finmindText(stock.finmind?.institutional?.investmentTrust);
+        refs.finmindDealer.textContent = finmindText(stock.finmind?.institutional?.dealer);
+        refs.finmindTotal.textContent = finmindText(stock.finmind?.institutional?.total);
+        refs.finmindMarginBalance.textContent = finmindText(stock.finmind?.margin?.marginPurchaseTodayBalance);
+        refs.finmindShortBalance.textContent = finmindText(stock.finmind?.margin?.shortSaleTodayBalance);
+        refs.finmindMarginBuy.textContent = finmindText(stock.finmind?.margin?.marginPurchaseBuy);
+        refs.finmindMarginSell.textContent = finmindText(stock.finmind?.margin?.marginPurchaseSell);
+        refs.finmindShortBuy.textContent = finmindText(stock.finmind?.margin?.shortSaleBuy);
+        refs.finmindShortSell.textContent = finmindText(stock.finmind?.margin?.shortSaleSell);
+        refs.finmindForeignShares.textContent = finmindText(stock.finmind?.foreignShare?.foreignShares);
+        refs.finmindForeignRatio.textContent = finmindText(stock.finmind?.foreignShare?.foreignRatio);
+        refs.finmindForeignRemainShares.textContent = finmindText(stock.finmind?.foreignShare?.foreignRemainingShares);
+        refs.finmindForeignRemainRatio.textContent = finmindText(stock.finmind?.foreignShare?.foreignRemainingRatio);
+      } catch (err) {
+        resetResult();
+        setError(err.message || '查詢失敗，請稍後再試。');
+      }
+    }
+  </script>
+</body>
+</html>
